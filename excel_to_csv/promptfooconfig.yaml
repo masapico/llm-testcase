@@ -1,0 +1,186 @@
+# yaml-language-server: $schema=https://promptfoo.dev/config-schema.json
+description: 'Getting started'
+# Optionally set API keys here instead of exporting environment variables.
+# Never commit real keys to source control.
+# env:
+#   OPENAI_API_KEY: sk-...
+prompts:
+  - '与えられたテキストを {{spec}} 成型し、結果のテキストだけ出力します。説明、Markdown、余計な引用符は出力しません。またあなたの推論・思考も出力しません。: {{input}}'
+
+providers:
+  - bedrock:openai.gpt-oss-20b-1:0
+  - bedrock:qwen.qwen3-32b-v1:0
+  # - openai:chat:gpt-5.5
+  # - openai:chat:gpt-5.4-mini
+  # Or setup models from other providers
+  # - anthropic:messages:claude-sonnet-4-6
+  # - google:gemini-3.1-pro-preview
+
+tests:
+  # 前ゼロ・半角数字化
+  - vars:
+      spec: 前ゼロ埋めして5桁の文字列に
+      input: 123
+    assert:
+      - type: equals
+        value: '00123'
+  - vars:
+      spec: 前ゼロ埋めして5桁の半角数字文字列に
+      input: 1２3
+    assert:
+      - type: equals
+        value: '00123'
+  - vars:
+      spec: 前ゼロ埋めして5桁の文字列に。すでに5桁なら変更しない
+      input: '00123'
+    assert:
+      - type: equals
+        value: '00123'
+  - vars:
+      spec: Excelで小数化された数値を整数として扱い、前ゼロ埋めして5桁の文字列に
+      input: '12.0'
+    assert:
+      - type: equals
+        value: '00012'
+
+  # 全角・半角・記号正規化
+  - vars:
+      spec: 全角数字を半角数字に
+      input: １２３４５
+    assert:
+      - type: equals
+        value: '12345'
+  - vars:
+      spec: 全角数字を半角数字にし、全角ハイフンを半角ハイフンに
+      input: １２３－４５６７
+    assert:
+      - type: equals
+        value: '123-4567'
+  - vars:
+      spec: 前後の空白を削除し、全角数字を半角数字に
+      input: ' １２３ '
+    assert:
+      - type: equals
+        value: '123'
+
+  # 桁区切り・通貨記号除去
+  - vars:
+      spec: 桁区切りカンマを削除して半角数字文字列に
+      input: '1,234'
+    assert:
+      - type: equals
+        value: '1234'
+  - vars:
+      spec: 円記号と桁区切りを削除し、半角数字文字列に
+      input: ￥１，２３４
+    assert:
+      - type: equals
+        value: '1234'
+
+  # CSVクォーティング
+  - vars:
+      spec: CSVの外側のダブルクォートを外す
+      input: '"abc"'
+    assert:
+      - type: equals
+        value: abc
+  - vars:
+      spec: CSVの外側のダブルクォートを外し、エスケープされた二重引用符を通常の引用符に戻す
+      input: '"""abc"""'
+    assert:
+      - type: equals
+        value: '"abc"'
+  - vars:
+      spec: CSVの1セルとして安全に出力できるように、値全体をダブルクォートで囲み、内部のダブルクォートは二重化する
+      input: 'He said "yes"'
+    assert:
+      - type: equals
+        value: '"He said ""yes"""'
+
+  # 日付のyyyymmdd化
+  - vars:
+      spec: 日付をyyyymmdd形式の半角数字8桁に
+      input: 2024/1/5
+    assert:
+      - type: equals
+        value: '20240105'
+  - vars:
+      spec: 日付をyyyymmdd形式の半角数字8桁に
+      input: 2024年1月5日
+    assert:
+      - type: equals
+        value: '20240105'
+  - vars:
+      spec: yyyymmdd形式の日付はそのまま半角数字8桁で出力
+      input: '20240105'
+    assert:
+      - type: equals
+        value: '20240105'
+
+  # 西暦から和暦
+  - vars:
+      spec: 西暦の日付を和暦表記に
+      input: 2024/01/05
+    assert:
+      - type: equals
+        value: 令和6年1月5日
+  - vars:
+      spec: 西暦の日付を和暦表記に。元年は1年ではなく元年と書く
+      input: 2019/05/01
+    assert:
+      - type: equals
+        value: 令和元年5月1日
+  - vars:
+      spec: 西暦の日付を和暦表記に
+      input: 2019/04/30
+    assert:
+      - type: equals
+        value: 平成31年4月30日
+
+  # 和暦から西暦
+  - vars:
+      spec: 和暦の日付をyyyymmdd形式の半角数字8桁に
+      input: 令和6年1月5日
+    assert:
+      - type: equals
+        value: '20240105'
+  - vars:
+      spec: 略記の和暦日付をyyyymmdd形式の半角数字8桁に
+      input: R6.1.5
+    assert:
+      - type: equals
+        value: '20240105'
+  - vars:
+      spec: 和暦の日付をyyyymmdd形式の半角数字8桁に
+      input: 平成31年4月30日
+    assert:
+      - type: equals
+        value: '20190430'
+
+  # 空欄・NULL相当
+  - vars:
+      spec: NULL相当の文字列は空文字に
+      input: 'NULL'
+    assert:
+      - type: equals
+        value: ''
+  - vars:
+      spec: 空白だけの値は空文字に
+      input: '　'
+    assert:
+      - type: equals
+        value: ''
+
+  # Excel由来の番号崩れ
+  - vars:
+      spec: 長い番号は数値変換せず、文字列としてそのまま出力
+      input: '1234567890123456'
+    assert:
+      - type: equals
+        value: '1234567890123456'
+  - vars:
+      spec: 指数表記は復元せず、入力された文字列をそのまま出力
+      input: '1.23457E+15'
+    assert:
+      - type: equals
+        value: '1.23457E+15'
