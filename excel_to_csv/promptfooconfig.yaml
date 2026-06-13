@@ -1,15 +1,36 @@
 # yaml-language-server: $schema=https://promptfoo.dev/config-schema.json
-description: 'Getting started'
+description: 'エクセルコピペからのCSVテキスト成型'
 # Optionally set API keys here instead of exporting environment variables.
 # Never commit real keys to source control.
 # env:
 #   OPENAI_API_KEY: sk-...
 prompts:
-  - '与えられたテキストを {{spec}} 成型し、結果のテキストだけ出力します。説明、Markdown、余計な引用符は出力しません。またあなたの推論・思考も出力しません。: {{input}}'
+  - |-
+    あなたはデータ整形関数です。
+    必ず次の出力契約に従ってください。
+
+    出力契約:
+    - 出力は変換後の値だけ
+    - 1行だけ
+    - Markdownなし
+    - 説明なし
+    - 引用符の追加なし
+    - <reasoning>、</reasoning>、思考過程、検討内容、途中計算は絶対に出力しない
+
+    仕様: {{spec}}
+    入力: {{input}}
+
+    変換後の値:
 
 providers:
-  - bedrock:openai.gpt-oss-20b-1:0
-  - bedrock:qwen.qwen3-32b-v1:0
+  - id: bedrock:openai.gpt-oss-20b-1:0
+    config:
+      temperature: 0
+      max_tokens: 64
+  - id: bedrock:qwen.qwen3-32b-v1:0
+    config:
+      temperature: 0
+      max_tokens: 64
   # - openai:chat:gpt-5.5
   # - openai:chat:gpt-5.4-mini
   # Or setup models from other providers
